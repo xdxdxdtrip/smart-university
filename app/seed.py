@@ -13,7 +13,7 @@ from app.security import hash_password
 
 DEMO_USERS = [
     ("Ерлан Сапаров", "teacher@smartuni.kz", "Teacher123", Role.TEACHER),
-    ("Айгерим Нурланова", "student@smartuni.kz", "Student123", Role.STUDENT),
+    ("Душманов Артур", "student@smartuni.kz", "Student123", Role.STUDENT),
     ("Данияр Ахметов", "student2@smartuni.kz", "Student123", Role.STUDENT),
 ]
 
