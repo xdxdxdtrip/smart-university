@@ -1,0 +1,44 @@
+@startuml use_case
+!include _style.puml
+title Use Case — Smart University: бронирование лабораторного оборудования
+left to right direction
+skinparam packageStyle rectangle
+
+actor "Студент" as Student
+actor "Преподаватель" as Teacher
+actor "Администратор" as Admin
+
+rectangle "Smart University" {
+  usecase "Регистрация и вход (JWT)" as UC_Login
+  usecase "Просмотр оборудования\nи свободного времени" as UC_Free
+  usecase "Забронировать\nоборудование" as UC_Book
+  usecase "Проверка конфликта\nвремени" as UC_Conflict
+  usecase "Отменить свою бронь" as UC_Cancel
+  usecase "История броней\nи уведомления" as UC_History
+  usecase "Одобрить / отклонить\nзаявку" as UC_Review
+  usecase "Уведомить заявителя" as UC_Notify
+  usecase "Вести лаборатории\nи оборудование" as UC_Catalog
+  usecase "Управлять пользователями\nи ролями" as UC_Users
+  usecase "Статистика\nиспользования" as UC_Stats
+}
+
+Student -- UC_Login
+Student -- UC_Free
+Student -- UC_Book
+Student -- UC_Cancel
+Student -- UC_History
+
+Teacher -- UC_Login
+Teacher -- UC_Book
+Teacher -- UC_History
+Teacher -- UC_Review
+
+UC_Book ..> UC_Conflict : <<include>>
+UC_Review ..> UC_Notify : <<include>>
+
+UC_Login -- Admin
+UC_Review -- Admin
+UC_Catalog -- Admin
+UC_Users -- Admin
+UC_Stats -- Admin
+@enduml

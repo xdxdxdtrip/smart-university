@@ -1,0 +1,84 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  lint:
+    name: Код-стайл (Ruff)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install ruff
+      - name: Ruff lint
+        run: ruff check .
+      - name: Ruff format
+        run: ruff format --check .
+
+  test:
+    name: Тесты (pytest + PostgreSQL)
+    needs: lint
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: smartuni
+          POSTGRES_PASSWORD: smartuni
+          POSTGRES_DB: smart_university_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U smartuni"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      TEST_DATABASE_URL: postgresql+psycopg://smartuni:smartuni@localhost:5432/smart_university_test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: requirements-dev.txt
+      - run: pip install -r requirements-dev.txt
+      - name: Запуск тестов
+        run: |
+          mkdir -p reports
+          pytest -v --cov=app --cov-report=term-missing --cov-report=xml:reports/coverage.xml \
+                 --junitxml=reports/junit.xml
+      - name: Сохранить отчёты
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-reports
+          path: reports/
+
+  docker:
+    name: Сборка и запуск в Docker
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Docker Compose up
+        run: docker compose up -d --build
+      - name: Проверка health-check
+        run: |
+          for i in $(seq 1 30); do
+            if curl -fsS http://localhost:8000/api/health; then exit 0; fi
+            sleep 2
+          done
+          docker compose logs api
+          exit 1
+      - name: Тесты внутри контейнера
+        run: docker compose --profile test run --rm tests
+      - name: Остановка
+        if: always()
+        run: docker compose down -v

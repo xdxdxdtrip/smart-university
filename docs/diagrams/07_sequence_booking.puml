@@ -1,0 +1,33 @@
+@startuml sequence_booking
+!include _style.puml
+title Sequence — создание брони с проверкой конфликтов
+
+actor "Студент" as S
+participant "Веб-интерфейс" as UI
+participant "FastAPI\n/api/bookings" as API
+participant "deps.py\nget_current_user" as AUTH
+participant "booking_service" as SVC
+database "PostgreSQL" as DB
+
+S -> UI : выбрать оборудование, время, цель
+UI -> API : POST /api/bookings\nAuthorization: Bearer JWT
+API -> AUTH : проверить токен и роль
+AUTH -> DB : SELECT users WHERE id = sub
+AUTH --> API : User(role = student)
+API -> SVC : create_booking(user, equipment_id, start, end)
+SVC -> DB : SELECT equipment ... FOR UPDATE
+SVC -> SVC : validate_time_window()
+SVC -> DB : SELECT bookings WHERE equipment_id = ?\nAND status IN (pending, approved)\nAND start_time < :end AND end_time > :start
+alt найдено пересечение
+  SVC --> API : BookingConflictError
+  API --> UI : 409 «Время пересекается с бронью #N»
+else свободно
+  SVC -> DB : INSERT bookings (status = pending)
+  SVC -> DB : INSERT booking_history
+  SVC -> DB : INSERT notifications (заявителю и админам)
+  SVC -> DB : COMMIT
+  SVC --> API : Booking
+  API --> UI : 201 Created + JSON брони
+end
+UI --> S : сообщение о результате
+@enduml

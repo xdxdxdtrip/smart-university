@@ -1,0 +1,39 @@
+@startuml deployment
+!include _style.puml
+title Deployment — развёртывание через Docker Compose и CI/CD
+
+node "Компьютер пользователя" as Client {
+  artifact "Браузер\n(веб-интерфейс, Swagger)" as Browser
+  artifact "Postman" as PM
+}
+
+node "Сервер / ПК разработчика\n(Docker Engine)" as Host {
+  node "Контейнер smartuni-api\npython:3.12-slim" as Api {
+    artifact "Uvicorn (ASGI)" as Uv
+    artifact "FastAPI app" as App
+  }
+  node "Контейнер smartuni-db\npostgres:16-alpine" as Db {
+    database "smart_university" as MainDb
+    database "smart_university_test" as TestDb
+  }
+  storage "Volume pgdata" as Vol
+}
+
+cloud "GitHub" as GH {
+  artifact "Репозиторий" as Repo
+  node "GitHub Actions" as GA {
+    artifact "lint: ruff" as J1
+    artifact "test: pytest + PostgreSQL" as J2
+    artifact "docker: compose up + health" as J3
+  }
+}
+
+Browser --> Uv : HTTP :8000
+PM --> Uv : HTTP :8000
+Uv --> App
+App --> MainDb : TCP :5432
+Db --> Vol
+Repo --> GA : push / pull request
+J1 --> J2
+J2 --> J3
+@enduml

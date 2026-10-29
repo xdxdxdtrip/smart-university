@@ -1,0 +1,121 @@
+@startuml class
+!include _style.puml
+title Class — доменная модель и сервисный слой
+hide empty members
+
+package "Модели — models" as pkg_models {
+  enum Role {
+    STUDENT
+    TEACHER
+    ADMIN
+  }
+  enum EquipmentStatus {
+    AVAILABLE
+    MAINTENANCE
+    DECOMMISSIONED
+  }
+  enum BookingStatus {
+    PENDING
+    APPROVED
+    REJECTED
+    CANCELLED
+  }
+
+  class User {
+    +id: int
+    +full_name: str
+    +email: str
+    +password_hash: str
+    +role: Role
+    +is_active: bool
+    +created_at: datetime
+  }
+  class Laboratory {
+    +id: int
+    +name: str
+    +building: str
+    +room: str
+    +description: str
+  }
+  class Equipment {
+    +id: int
+    +name: str
+    +inventory_number: str
+    +category: str
+    +status: EquipmentStatus
+    +laboratory_id: int
+  }
+  class Booking {
+    +id: int
+    +user_id: int
+    +equipment_id: int
+    +start_time: datetime
+    +end_time: datetime
+    +purpose: str
+    +status: BookingStatus
+    +reviewed_by_id: int
+    +review_comment: str
+  }
+  class BookingHistory {
+    +id: int
+    +booking_id: int
+    +old_status: BookingStatus
+    +new_status: BookingStatus
+    +changed_by_id: int
+    +comment: str
+    +changed_at: datetime
+  }
+  class Notification {
+    +id: int
+    +user_id: int
+    +booking_id: int
+    +message: str
+    +is_read: bool
+  }
+}
+
+package "Сервисы — services" as pkg_services {
+  class BookingService <<module>> {
+    +intervals_overlap(a_start, a_end, b_start, b_end): bool
+    +validate_time_window(start, end, now)
+    +compute_free_slots(work_start, work_end, busy): list
+    +can_review(reviewer, booking): bool
+    +find_conflicts(db, equipment_id, start, end): list
+    +create_booking(db, user, equipment_id, start, end, purpose): Booking
+    +change_status(db, booking, new_status, actor, comment): Booking
+  }
+  class Security <<module>> {
+    +hash_password(password): str
+    +verify_password(password, hash): bool
+    +create_access_token(user_id, role): str
+    +decode_access_token(token): dict
+  }
+  class DomainError {
+    +status_code: int
+    +detail: str
+  }
+  class BookingValidationError
+  class BookingConflictError
+  class PermissionDeniedError
+  class NotFoundError
+}
+
+User "1" -- "0..*" Booking : создаёт >
+User "1" -- "0..*" Notification : получает >
+Laboratory "1" -- "0..*" Equipment : содержит >
+Equipment "1" -- "0..*" Booking : бронируется >
+Booking "1" *-- "1..*" BookingHistory : журнал >
+User ..> Role
+Equipment ..> EquipmentStatus
+Booking ..> BookingStatus
+
+DomainError <|-- BookingValidationError
+DomainError <|-- BookingConflictError
+DomainError <|-- PermissionDeniedError
+DomainError <|-- NotFoundError
+
+BookingService ..> Booking
+BookingService ..> Notification
+BookingService ..> BookingHistory
+BookingService ..> DomainError : raises
+@enduml

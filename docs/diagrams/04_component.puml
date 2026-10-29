@@ -1,0 +1,53 @@
+@startuml component
+!include _style.puml
+title Component — архитектура приложения (слоистая)
+
+actor "Пользователь" as U
+component "Веб-интерфейс\n(HTML + JavaScript)\napp/static" as UI
+component "Swagger UI / Postman" as SW
+
+package "FastAPI-приложение (app/)" {
+  package "Слой API — routers/" {
+    component "auth" as R_Auth
+    component "users" as R_Users
+    component "laboratories" as R_Labs
+    component "equipment" as R_Eq
+    component "bookings" as R_Book
+    component "notifications" as R_Not
+    component "stats" as R_Stats
+  }
+  component "Безопасность\ndeps.py + security.py\n(JWT, RBAC, PBKDF2)" as SEC
+  component "Валидация\nschemas.py (Pydantic)" as SCH
+  component "Бизнес-логика\nservices/booking_service.py" as SVC
+  component "ORM-модели\nmodels.py (SQLAlchemy 2.0)" as ORM
+  component "Подключение к БД\ndatabase.py" as DBC
+}
+
+database "PostgreSQL 16" as PG
+
+U --> UI
+U --> SW
+UI --> R_Auth : REST / JSON
+UI --> R_Book
+SW --> R_Eq
+
+R_Auth --> SEC
+R_Book --> SEC
+R_Eq --> SEC
+R_Labs --> SEC
+R_Users --> SEC
+R_Not --> SEC
+R_Stats --> SEC
+
+R_Book --> SCH
+R_Eq --> SCH
+R_Book --> SVC
+R_Eq --> SVC
+SVC --> ORM
+R_Labs --> ORM
+R_Users --> ORM
+R_Not --> ORM
+R_Stats --> ORM
+ORM --> DBC
+DBC --> PG : psycopg 3
+@enduml

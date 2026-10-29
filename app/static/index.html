@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Smart University — бронирование оборудования</title>
+  <link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <span class="logo">SU</span>
+      <div>
+        <strong>Smart University</strong>
+        <small>Бронирование лабораторного оборудования</small>
+      </div>
+    </div>
+    <div class="userbox hidden" id="userbox">
+      <button class="bell" id="bellBtn" title="Уведомления">🔔<span id="bellCount" class="badge hidden">0</span></button>
+      <div class="who">
+        <span id="userName"></span>
+        <span class="role" id="userRole"></span>
+      </div>
+      <button class="btn ghost" id="logoutBtn">Выйти</button>
+    </div>
+  </header>
+
+  <!-- ===== Вход / регистрация ===== -->
+  <main id="authView" class="auth">
+    <section class="card auth-card">
+      <div class="tabs small">
+        <button class="tab active" data-auth="login">Вход</button>
+        <button class="tab" data-auth="register">Регистрация</button>
+      </div>
+
+      <form id="loginForm" class="form">
+        <label>Email<input name="username" type="email" required autocomplete="username" /></label>
+        <label>Пароль<input name="password" type="password" required autocomplete="current-password" /></label>
+        <button class="btn primary" type="submit">Войти</button>
+      </form>
+
+      <form id="registerForm" class="form hidden">
+        <label>ФИО<input name="full_name" required minlength="2" /></label>
+        <label>Email<input name="email" type="email" required /></label>
+        <label>Пароль <small>(не менее 8 символов, буквы и цифры)</small><input name="password" type="password" required minlength="8" /></label>
+        <label>Роль
+          <select name="role">
+            <option value="student">Студент</option>
+            <option value="teacher">Преподаватель</option>
+          </select>
+        </label>
+        <button class="btn primary" type="submit">Зарегистрироваться</button>
+      </form>
+
+      <div class="demo">
+        <p>Демо-аккаунты:</p>
+        <button class="chip" data-demo="admin@smartuni.kz|Admin12345">Администратор</button>
+        <button class="chip" data-demo="teacher@smartuni.kz|Teacher123">Преподаватель</button>
+        <button class="chip" data-demo="student@smartuni.kz|Student123">Студент</button>
+      </div>
+    </section>
+  </main>
+
+  <!-- ===== Основное приложение ===== -->
+  <main id="appView" class="hidden">
+    <nav class="tabs" id="mainTabs">
+      <button class="tab active" data-view="equipment">Оборудование</button>
+      <button class="tab" data-view="my" data-roles="student,teacher">Мои брони</button>
+      <button class="tab" data-view="requests" data-roles="teacher,admin">Заявки</button>
+      <button class="tab" data-view="notifications">Уведомления</button>
+      <button class="tab" data-view="admin" data-roles="admin">Управление</button>
+    </nav>
+
+    <!-- Оборудование -->
+    <section class="view" id="view-equipment">
+      <div class="toolbar">
+        <select id="labFilter"><option value="">Все лаборатории</option></select>
+        <select id="statusFilter">
+          <option value="">Любой статус</option>
+          <option value="available">Доступно</option>
+          <option value="maintenance">На обслуживании</option>
+          <option value="decommissioned">Списано</option>
+        </select>
+        <input id="searchInput" type="search" placeholder="Поиск по названию или инв. номеру" />
+      </div>
+      <div class="split">
+        <div class="list" id="equipmentList"></div>
+        <aside class="card detail" id="equipmentDetail">
+          <p class="muted">Выберите оборудование слева, чтобы увидеть свободное время и забронировать.</p>
+        </aside>
+      </div>
+    </section>
+
+    <!-- Мои брони -->
+    <section class="view hidden" id="view-my">
+      <div class="toolbar">
+        <select id="myStatusFilter">
+          <option value="">Все статусы</option>
+          <option value="pending">Ожидают</option>
+          <option value="approved">Одобрены</option>
+          <option value="rejected">Отклонены</option>
+          <option value="cancelled">Отменены</option>
+        </select>
+      </div>
+      <div class="card"><table class="table" id="myTable"></table></div>
+    </section>
+
+    <!-- Заявки -->
+    <section class="view hidden" id="view-requests">
+      <div class="toolbar">
+        <select id="reqStatusFilter">
+          <option value="pending">Ожидают решения</option>
+          <option value="approved">Одобрены</option>
+          <option value="rejected">Отклонены</option>
+          <option value="cancelled">Отменены</option>
+          <option value="">Все</option>
+        </select>
+        <input id="reqDay" type="date" />
+      </div>
+      <div class="card"><table class="table" id="reqTable"></table></div>
+    </section>
+
+    <!-- Уведомления -->
+    <section class="view hidden" id="view-notifications">
+      <div class="toolbar"><button class="btn" id="readAllBtn">Отметить все как прочитанные</button></div>
+      <div class="list" id="notificationList"></div>
+    </section>
+
+    <!-- Управление -->
+    <section class="view hidden" id="view-admin">
+      <div class="stats" id="statsBox"></div>
+      <div class="grid2">
+        <form class="card form" id="labForm">
+          <h3>Новая лаборатория</h3>
+          <label>Название<input name="name" required /></label>
+          <div class="row">
+            <label>Корпус<input name="building" required /></label>
+            <label>Аудитория<input name="room" required /></label>
+          </div>
+          <label>Описание<input name="description" /></label>
+          <button class="btn primary">Добавить</button>
+        </form>
+        <form class="card form" id="eqForm">
+          <h3>Новое оборудование</h3>
+          <label>Название<input name="name" required /></label>
+          <div class="row">
+            <label>Инв. номер<input name="inventory_number" required /></label>
+            <label>Категория<input name="category" required /></label>
+          </div>
+          <label>Лаборатория<select name="laboratory_id" id="eqLabSelect" required></select></label>
+          <label>Описание<input name="description" /></label>
+          <button class="btn primary">Добавить</button>
+        </form>
+      </div>
+      <div class="card">
+        <h3>Оборудование</h3>
+        <table class="table" id="adminEqTable"></table>
+      </div>
+      <div class="card">
+        <h3>Пользователи</h3>
+        <table class="table" id="usersTable"></table>
+      </div>
+    </section>
+  </main>
+
+  <div id="toast" class="toast hidden"></div>
+  <footer class="footer">API-документация: <a href="/docs" target="_blank">Swagger UI</a> · <a href="/redoc" target="_blank">ReDoc</a></footer>
+  <script src="/static/app.js"></script>
+</body>
+</html>

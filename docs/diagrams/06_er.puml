@@ -1,0 +1,87 @@
+@startuml er
+!include _style.puml
+title ER-диаграмма базы данных PostgreSQL
+hide circle
+skinparam linetype ortho
+
+entity "users" as users {
+  * id : SERIAL <<PK>>
+  --
+  * full_name : VARCHAR(120)
+  * email : VARCHAR(255) <<UNIQUE>>
+  * password_hash : VARCHAR(255)
+  * role : VARCHAR(20)  student | teacher | admin
+  * is_active : BOOLEAN
+  * created_at : TIMESTAMP
+}
+
+entity "laboratories" as labs {
+  * id : SERIAL <<PK>>
+  --
+  * name : VARCHAR(120) <<UNIQUE>>
+  * building : VARCHAR(80)
+  * room : VARCHAR(20)
+  description : TEXT
+  * created_at : TIMESTAMP
+}
+
+entity "equipment" as eq {
+  * id : SERIAL <<PK>>
+  --
+  * laboratory_id : INT <<FK>>
+  * name : VARCHAR(120)
+  * inventory_number : VARCHAR(50) <<UNIQUE>>
+  * category : VARCHAR(60)
+  description : TEXT
+  * status : VARCHAR(20)  available | maintenance | decommissioned
+  * created_at : TIMESTAMP
+}
+
+entity "bookings" as bk {
+  * id : SERIAL <<PK>>
+  --
+  * user_id : INT <<FK>>
+  * equipment_id : INT <<FK>>
+  * start_time : TIMESTAMP
+  * end_time : TIMESTAMP
+  * purpose : VARCHAR(255)
+  * status : VARCHAR(20)  pending | approved | rejected | cancelled
+  reviewed_by_id : INT <<FK>>
+  review_comment : VARCHAR(255)
+  * created_at : TIMESTAMP
+  * updated_at : TIMESTAMP
+  ..
+  CHECK (end_time > start_time)
+  INDEX (equipment_id, start_time, end_time)
+}
+
+entity "booking_history" as hist {
+  * id : SERIAL <<PK>>
+  --
+  * booking_id : INT <<FK>>
+  old_status : VARCHAR(20)
+  * new_status : VARCHAR(20)
+  changed_by_id : INT <<FK>>
+  comment : VARCHAR(255)
+  * changed_at : TIMESTAMP
+}
+
+entity "notifications" as nt {
+  * id : SERIAL <<PK>>
+  --
+  * user_id : INT <<FK>>
+  booking_id : INT <<FK>>
+  * message : VARCHAR(255)
+  * is_read : BOOLEAN
+  * created_at : TIMESTAMP
+}
+
+labs ||--o{ eq : "содержит"
+users ||--o{ bk : "создаёт"
+users |o--o{ bk : "рассматривает"
+eq ||--o{ bk : "бронируется"
+bk ||--|{ hist : "журнал статусов"
+users |o--o{ hist : "изменил"
+users ||--o{ nt : "получает"
+bk |o--o{ nt : "о брони"
+@enduml
